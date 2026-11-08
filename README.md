@@ -58,11 +58,4 @@ _Filled in after the eval (Task 3.5)._
 | Median cost per task | |
 | p50 / p95 time per task | |
 
-## Contributions
 
-| Member | Owned | Also did |
-|---|---|---|
-| Eya | Task 2 — agent loop, stop rule, checkpoint | |
-| Khalil | Task 1 — sandbox & tools | |
-| Mohamed | Task 3 — evaluation & metrics | |
-| Yosr | Task 4 — safety, threat model, deliverables | |
