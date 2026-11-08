@@ -1,0 +1,26 @@
+[project]
+name = "inbox-operator"
+version = "0.1.0"
+description = "CS496 Project 3 - The Operator: an email triage agent with real (sandboxed) side effects"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langchain>=1.0",          # create_agent + built-in middleware (HITL, call limits, retries)
+    "langchain-openai>=1.0",   # OpenAI chat models for LangChain
+    "langgraph>=1.0",          # checkpointer needed by the human-in-the-loop middleware
+    "langsmith>=0.4",          # tracing of every run (optional, needs LANGSMITH_API_KEY)
+    "agentevals>=0.0.9",       # trajectory match / trajectory LLM-as-judge evaluators
+    "pydantic>=2.7",           # strict tool input schemas
+    "python-dotenv>=1.0",      # loads OPENAI_API_KEY from .env
+    "pyyaml>=6.0",             # eval scenarios are YAML
+    "rich>=13.7",              # readable CLI trace + approval prompt
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
