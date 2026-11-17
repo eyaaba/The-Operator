@@ -1,6 +1,5 @@
-# Inbox Operator
+# The Operator
 
-CS496 AI Engineering — Project 3 "The Operator" — MedTech, Fall 2026.
 
 An email triage agent that reads a (sandboxed) inbox, labels and archives
 emails, and drafts and sends replies — **only after a human approves each write**.
@@ -59,11 +58,3 @@ _Filled in after the eval (Task 3.5)._
 | Median cost per task | |
 | p50 / p95 time per task | |
 
-## Contributions
-
-| Member | Owned | Also did |
-|---|---|---|
-| Nour | Task 2 — agent loop, stop rule, checkpoint | |
-| Khalil | Task 1 — sandbox & tools | |
-| Mohamed | Task 3 — evaluation & metrics | |
-| Yosr | Task 4 — safety, threat model, deliverables | |
