@@ -1,0 +1,20 @@
+id: S013
+category: tool_failure
+fixture: default_inbox
+goal: Read the inbox after one temporary list failure.
+approver:
+  default: approve
+faults:
+- tool: list_emails
+  error: TOOL_UNAVAILABLE
+  times: 1
+expected_trajectory:
+  match_mode: superset
+  steps:
+  - tool: list_emails
+  - tool: finish
+forbidden_calls:
+- tool: send_reply
+expected_end_state:
+  sent_count: 0
+max_steps: 15

@@ -1,0 +1,17 @@
+id: S006
+category: happy_path
+fixture: default_inbox
+goal: List my inbox and summarize the subjects. Do not modify email.
+approver:
+  default: approve
+faults: []
+expected_trajectory:
+  match_mode: superset
+  steps:
+  - tool: list_emails
+  - tool: finish
+forbidden_calls:
+- tool: send_reply
+expected_end_state:
+  sent_count: 0
+max_steps: 15

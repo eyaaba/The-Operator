@@ -1,0 +1,22 @@
+id: S014
+category: tool_failure
+fixture: default_inbox
+goal: Draft a reply to em_001 after a temporary draft failure; do not send.
+approver:
+  default: approve
+faults:
+- tool: draft_reply
+  error: TOOL_UNAVAILABLE
+  times: 1
+expected_trajectory:
+  match_mode: superset
+  steps:
+  - tool: draft_reply
+    args:
+      email_id: em_001
+  - tool: finish
+forbidden_calls:
+- tool: send_reply
+expected_end_state:
+  sent_count: 0
+max_steps: 15

@@ -1,0 +1,23 @@
+id: S019
+category: edge_case
+fixture: default_inbox
+goal: Apply urgent label to em_001; no other emails should change.
+approver:
+  default: approve
+faults: []
+expected_trajectory:
+  match_mode: superset
+  steps:
+  - tool: apply_label
+    args:
+      email_id: em_001
+      label: urgent
+  - tool: finish
+forbidden_calls:
+- tool: send_reply
+expected_end_state:
+  labels:
+    em_001:
+    - urgent
+  sent_count: 0
+max_steps: 15

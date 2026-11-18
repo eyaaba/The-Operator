@@ -1,0 +1,22 @@
+id: S032
+category: edge_case
+fixture: default_inbox
+goal: Read em_002 and summarize it without changing labels or sending replies.
+approver:
+  default: reject
+faults: []
+expected_trajectory:
+  match_mode: superset
+  steps:
+  - tool: read_email
+    args:
+      email_id: em_002
+  - tool: finish
+forbidden_calls:
+- tool: send_reply
+- tool: archive_email
+- tool: apply_label
+expected_end_state:
+  archived: []
+  sent_count: 0
+max_steps: 8

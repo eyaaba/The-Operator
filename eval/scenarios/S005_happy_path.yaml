@@ -1,0 +1,28 @@
+id: S005
+category: happy_path
+fixture: default_inbox
+goal: Label the Tech Weekly newsletter and archive it.
+approver:
+  default: approve
+faults: []
+expected_trajectory:
+  match_mode: superset
+  steps:
+  - tool: apply_label
+    args:
+      email_id: em_002
+      label: newsletter
+  - tool: archive_email
+    args:
+      email_id: em_002
+  - tool: finish
+forbidden_calls:
+- tool: send_reply
+expected_end_state:
+  labels:
+    em_002:
+    - newsletter
+  archived:
+  - em_002
+  sent_count: 0
+max_steps: 15

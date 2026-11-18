@@ -1,60 +1,50 @@
-# The Operator
+# The Operator — CS496 Project 3
 
+A **sandbox-only** inbox operator built with LangChain `create_agent` and `gpt-4.1-mini`.
 
-An email triage agent that reads a (sandboxed) inbox, labels and archives
-emails, and drafts and sends replies — **only after a human approves each write**.
+## Safety-first design
 
-## Setup (one command)
+- Seven tools: `list_emails`, `read_email`, `apply_label`, `archive_email`, `draft_reply`, `send_reply`, `finish`.
+- Pydantic schemas forbid extra input fields; write tools are SQLite-only and idempotent.
+- The write tools cannot execute until a human reviews the LangChain HITL interrupt.
+- Model/tool call caps, repeated-call and write caps, failure retries, and a cost stop-policy module.
+- No email text is trusted as instructions. `send_reply` can send **only to the original sender**.
+- Audit logs capture sanitized structured tool arguments and results. Use synthetic fixture data only.
 
-Requires [uv](https://docs.astral.sh/uv/). Then:
+## Install and run
+
+Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
+cp .env.example .env  # Windows: copy .env.example .env
+# Set OPENAI_API_KEY in .env; NEVER commit it.
+uv run python -m sandbox.reset
+uv run python -m agent.cli "Label the Tech Weekly newsletter as newsletter and archive it"
 ```
 
-Copy `.env.example` to `.env` and paste the OpenAI key.
+Each write is interrupted for interactive approval, rejection or approved editing, before any sandbox mutation. If a task only asks for a draft, **do not approve send actions**.
 
-## Run (one command)
+## Tests and evaluation
 
 ```bash
-uv run python -m sandbox.reset && uv run python -m agent.cli "Triage my inbox"
+uv run pytest
+uv run python -m eval.run_eval              # validate all 32 YAML scenario definitions offline
+uv run python -m eval.run_eval --only S001 --live # uses OpenAI API and costs money
+uv run python -m eval.run_eval --live        # full 32-scenario live evaluation
 ```
 
-## Other commands
+Live outputs are saved to ignored `eval/results/latest.json`, `latest.csv`, `summary.json`. These are **not** precomputed model success claims. Evaluation scores forbidden calls, expected order of tool calls, and SQLite end state; validates test failures and human rejection via scenario definitions. Live trajectory evaluation is deterministic rule-based, not LLM-as-judge. `agentevals` is in the dependency set for future optional comparison.
 
-| What | Command |
-|---|---|
-| Reset the sandbox mailbox | `uv run python -m sandbox.reset` |
-| Run the tests | `uv run pytest` |
-| Run the full eval | `uv run python -m eval.run_eval` |
+## Project status
 
-## Stack
+- Task 1: seven operational SQLite tools, idempotency, error hints, fault injection and audit logging.
+- Task 2: create_agent, safety middleware, HITL with in-memory checkpoint, stop-policy unit tests, CLI. **Requires API-backed integration validation.**
+- Task 3: 32 YAML scenarios, validator, rule-based trajectory and state metrics runner. **Live scores not yet measured.**
+- Task 4: threat model, error taxonomy, postmortem and delivery instructions.
 
-LangChain `create_agent` + middleware (human-in-the-loop, call limits, retries) ·
-OpenAI `gpt-4.1-mini` · Pydantic strict schemas · SQLite sandbox ·
-AgentEvals trajectory evaluators · pytest · LangSmith tracing (optional).
+Limitations: in-memory checkpoints do not survive process restarts; cost accounting in `StopRule` is configurable but is not yet wired to live model usage; the live evaluator does not yet report authoritative API billing. The repeated-call cap denies the offending tool request but does not itself end the entire graph. All sends are sandbox table inserts, never real email.
 
-## Repo map
+## Files
 
-```
-agent/        tools, schemas (the contract), the agent, config (limits), CLI
-sandbox/      SQLite schema, fixture inboxes, reset script
-eval/         30+ YAML scenarios, trajectory evaluator, metrics runner
-tests/        contract, sandbox, stop-rule proofs
-docs/         tool_contract.md
-errors.md  threat_model.md  postmortem.md  report.pdf
-```
-
-## Results
-
-_Filled in after the eval (Task 3.5)._
-
-| Metric | Value |
-|---|---|
-| Task success rate (n=32) | |
-| Recovery after failure | |
-| Injection cases blocked | |
-| Stop-rule violations | |
-| Median cost per task | |
-| p50 / p95 time per task | |
-
+`agent/` schema, tools, agent, CLI and limits · `sandbox/` SQLite schema/fixtures/reset · `eval/` scenarios and runner · `tests/` deterministic safety tests · `docs/` tool contract · `threat_model.md`, `errors.md`, `postmortem.md`.

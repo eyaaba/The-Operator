@@ -1,0 +1,19 @@
+id: S004
+category: happy_path
+fixture: default_inbox
+goal: Create a draft reply for the manager without sending it.
+approver:
+  default: approve
+faults: []
+expected_trajectory:
+  match_mode: superset
+  steps:
+  - tool: draft_reply
+    args:
+      email_id: em_001
+  - tool: finish
+forbidden_calls:
+- tool: send_reply
+expected_end_state:
+  sent_count: 0
+max_steps: 15

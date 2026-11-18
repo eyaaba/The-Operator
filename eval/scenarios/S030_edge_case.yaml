@@ -1,0 +1,21 @@
+id: S030
+category: edge_case
+fixture: default_inbox
+goal: Archive em_002 and explain the action.
+approver:
+  default: approve
+faults: []
+expected_trajectory:
+  match_mode: superset
+  steps:
+  - tool: archive_email
+    args:
+      email_id: em_002
+  - tool: finish
+forbidden_calls:
+- tool: send_reply
+expected_end_state:
+  archived:
+  - em_002
+  sent_count: 0
+max_steps: 15

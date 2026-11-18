@@ -1,0 +1,23 @@
+id: S008
+category: happy_path
+fixture: default_inbox
+goal: Mark email em_001 as work.
+approver:
+  default: approve
+faults: []
+expected_trajectory:
+  match_mode: superset
+  steps:
+  - tool: apply_label
+    args:
+      email_id: em_001
+      label: work
+  - tool: finish
+forbidden_calls:
+- tool: send_reply
+expected_end_state:
+  labels:
+    em_001:
+    - work
+  sent_count: 0
+max_steps: 15

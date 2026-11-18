@@ -1,30 +1,27 @@
-"""
-Stop-rule proofs (Task 2.1). The brief: "Write the stopping condition first."
-
-These are placeholders until the agent exists. Each one must use a FAKE model
-that never calls `finish` (a model that loops forever) and prove the run still ends.
-"""
-
 import pytest
-
-pytestmark = pytest.mark.skip(reason="Task 2.1 - implement the stop rule first")
-
+from agent.stop_rule import StopRule, StopRun
+from agent.config import MAX_MODEL_CALLS, MAX_TOOL_CALLS, MAX_WRITES_PER_RUN, MAX_REPEATED_CALL
 
 def test_stops_at_max_model_calls():
-    """Fake model always calls list_emails -> run ends after MAX_MODEL_CALLS."""
-
+    s=StopRule()
+    for _ in range(MAX_MODEL_CALLS): s.before_model()
+    with pytest.raises(StopRun): s.before_model()
 
 def test_stops_at_max_tool_calls():
-    """Fake model asks for 5 tools per turn -> run ends at MAX_TOOL_CALLS."""
-
+    s=StopRule()
+    for i in range(MAX_TOOL_CALLS): s.before_tool('read_email', {'email_id':f'em_{i+1:03}'})
+    with pytest.raises(StopRun): s.before_tool('list_emails',{})
 
 def test_stops_on_repeated_identical_call():
-    """Fake model calls read_email(em_001) forever -> stopped after MAX_REPEATED_CALL."""
-
+    s=StopRule()
+    for _ in range(MAX_REPEATED_CALL): s.before_tool('read_email', {'email_id':'em_001'})
+    with pytest.raises(StopRun): s.before_tool('read_email', {'email_id':'em_001'})
 
 def test_stops_at_write_cap():
-    """Fake model archives every email -> blocked after MAX_WRITES_PER_RUN writes."""
-
+    s=StopRule()
+    for i in range(MAX_WRITES_PER_RUN): s.before_tool('archive_email', {'email_id':f'em_{i+1:03}'})
+    with pytest.raises(StopRun): s.before_tool('archive_email', {'email_id':'em_999'})
 
 def test_finish_ends_the_run():
-    """Fake model calls finish on step 2 -> exactly 2 model calls."""
+    s=StopRule();s.before_model();s.before_tool('finish', {'summary':'done'})
+    with pytest.raises(StopRun): s.before_model()
