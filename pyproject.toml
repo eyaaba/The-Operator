@@ -16,6 +16,10 @@ dependencies = [
     "rich>=13.7",              # readable CLI trace + approval prompt
 ]
 
+[project.optional-dependencies]
+gmail = ["google-api-python-client>=2.140", "google-auth-oauthlib>=1.2"]
+report = ["reportlab>=4.2"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",

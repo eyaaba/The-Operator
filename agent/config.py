@@ -11,6 +11,7 @@ load_dotenv()
 
 # --- Model -----------------------------------------------------------------
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+OPERATOR_BACKEND = os.getenv("OPERATOR_BACKEND", "sandbox")
 TEMPERATURE = 0.0  # reproducible evals
 
 # --- Stop rule (Task 2.1) -------------------------------------------------

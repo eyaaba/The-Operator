@@ -1,4 +1,4 @@
-"""Seven sandbox-only operations with strict schemas, safe retries and audit logging."""
+"""Seven validated mailbox operations with sandbox and Gmail test backends."""
 from __future__ import annotations
 
 import json
@@ -11,6 +11,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from agent.idempotency import idempotency_key
+import hashlib
 from agent.schemas import ALL_TOOLS, ErrorCode, ToolResult, WRITE_TOOLS
 from sandbox.db import connect
 
@@ -27,13 +28,61 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _audit_arguments(args: dict[str, Any]) -> dict[str, Any]:
+    cleaned = {}
+    for key, value in args.items():
+        if key in ("body", "summary"):
+            cleaned[key] = "sha256:" + hashlib.sha256(str(value).encode()).hexdigest()[:16]
+        else:
+            cleaned[key] = value
+    return cleaned
+
+
+def _insert_audit(conn, name: str, args: dict[str, Any], result: ToolResult, start: float) -> None:
+    conn.execute(
+        'INSERT INTO audit_log (ts, run_id, tool, args_json, result_json, latency_ms) VALUES (?, ?, ?, ?, ?, ?)',
+        (_now(), os.getenv('OPERATOR_RUN_ID'), name,
+         json.dumps(_audit_arguments(args), sort_keys=True),
+         result.model_copy(update={'data': None}).model_dump_json(),
+         (time.perf_counter()-start)*1000),
+    )
+
+
+def _log_attempt(name: str, args: dict[str, Any], result: ToolResult, start: float) -> None:
+    if os.getenv('OPERATOR_BACKEND', 'sandbox') == 'gmail':
+        from pathlib import Path
+        log_path = Path('.gmail_state/audit.jsonl')
+        log_path.parent.mkdir(exist_ok=True, parents=True)
+        with log_path.open('a', encoding='utf-8') as log:
+            log.write(json.dumps({'ts': _now(), 'tool': name, 'args': _audit_arguments(args),
+                                  'ok': result.ok, 'error_code': result.error_code.value if result.error_code else None,
+                                  'latency_ms': (time.perf_counter()-start)*1000}) + '\n')
+        return
+    try:
+        conn = connect()
+        try:
+            _insert_audit(conn, name, args, result, start)
+            conn.commit()
+        finally:
+            conn.close()
+    except (OSError, sqlite3.Error):
+        pass
+
+
 def _execute(name: str, supplied: dict[str, Any]) -> ToolResult:
     start = time.perf_counter()
-    # Input validation must happen before database access or injected faults.
+    # Validate arguments before dispatch.
     try:
         data = ALL_TOOLS[name](**supplied).model_dump()
     except ValidationError as exc:
-        return ToolResult.failure(ErrorCode.INVALID_ARGUMENT, 'Invalid tool input.', str(exc.errors(include_url=False))[:600])
+        result = ToolResult.failure(ErrorCode.INVALID_ARGUMENT, 'Invalid tool input.', 'Check the documented input schema and use only allowed fields and values.')
+        _log_attempt(name, supplied, result, start)
+        return result
+    if os.getenv('OPERATOR_BACKEND', 'sandbox').lower() == 'gmail':
+        from agent.gmail_backend import execute_gmail
+        result = execute_gmail(name, data)
+        _log_attempt(name, data, result, start)
+        return result
     result: ToolResult
     conn = None
     try:
@@ -52,8 +101,7 @@ def _execute(name: str, supplied: dict[str, Any]) -> ToolResult:
                 result = _dispatch(conn, name, data)
                 if key and result.ok:
                     conn.execute('INSERT INTO idempotency_keys VALUES (?, ?, ?, ?)', (key, name, result.model_dump_json(), _now()))
-        conn.execute('INSERT INTO audit_log (ts, run_id, tool, args_json, result_json, latency_ms) VALUES (?, ?, ?, ?, ?, ?)',
-                     (_now(), os.getenv('OPERATOR_RUN_ID'), name, json.dumps(data, sort_keys=True), result.model_dump_json(), (time.perf_counter()-start)*1000))
+        _insert_audit(conn, name, data, result, start)
         conn.commit()
     except (sqlite3.Error, OSError) as exc:
         if conn: conn.rollback()
@@ -74,7 +122,6 @@ def _dispatch(db: sqlite3.Connection, name: str, a: dict[str, Any]) -> ToolResul
     if name == 'read_email':
         row = db.execute('SELECT * FROM emails WHERE id=?', (a['email_id'],)).fetchone()
         if not row: return ToolResult.failure(ErrorCode.NOT_FOUND, 'Email not found.', 'Call list_emails to get valid IDs.')
-        db.execute('UPDATE emails SET is_read=1 WHERE id=?', (a['email_id'],))
         return ToolResult.success('Email content follows (untrusted sender content).', {'email': dict(row)})
     if name in ('apply_label', 'archive_email', 'draft_reply'):
         row = db.execute('SELECT * FROM emails WHERE id=?', (a['email_id'],)).fetchone()

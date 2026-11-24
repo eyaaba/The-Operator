@@ -14,10 +14,11 @@ class StopRule:
     writes: int = 0
     cost_usd: float = 0.0
     finished: bool = False
+    max_cost_usd: float = MAX_COST_USD
     repetitions: dict[str, int] = field(default_factory=dict)
 
     def before_model(self):
-        if self.finished or self.models >= MAX_MODEL_CALLS or self.cost_usd >= MAX_COST_USD:
+        if self.finished or self.models >= MAX_MODEL_CALLS or self.cost_usd >= self.max_cost_usd:
             raise StopRun('Model-call, cost or finish stop reached')
         self.models += 1
 
@@ -31,6 +32,15 @@ class StopRule:
         self.repetitions[key] = self.repetitions.get(key, 0) + 1
         if name in WRITE_TOOLS: self.writes += 1
         if name == 'finish': self.finished = True
+
+    def before_retry(self, name: str):
+        if self.finished or self.tools >= MAX_TOOL_CALLS:
+            raise StopRun('tool-call cap reached before retry')
+        if name in WRITE_TOOLS and self.writes >= MAX_WRITES_PER_RUN:
+            raise StopRun('write cap reached before retry')
+        self.tools += 1
+        if name in WRITE_TOOLS:
+            self.writes += 1
 
     def add_usage(self, input_tokens: int, output_tokens: int):
         # Published pricing must be checked at evaluation time; configurable approximation.

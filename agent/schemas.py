@@ -45,7 +45,7 @@ class ListEmailsInput(StrictInput):
 
 
 class ReadEmailInput(StrictInput):
-    """Read one email in full (sender, subject, body). Marks it as read."""
+    """Read one email in full without changing mailbox state."""
 
     email_id: str = Field(..., pattern=EMAIL_ID_PATTERN, description="Email id, e.g. em_001.")
 
